@@ -20,6 +20,7 @@ import akka.stream.stage.TimerGraphStageLogic
 import akka.util.OptionVal
 import akka.Done
 import scala.concurrent.Future
+import akka.event.Logging
 
 /**
  * INTERNAL API
