@@ -3,21 +3,23 @@
  */
 package akka.stream.io
 
-import java.io.IOException
+import java.io.{ IOException, OutputStream }
 import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeoutException
+
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.Attributes.inputBuffer
 import akka.stream.impl.StreamSupervisor.Children
 import akka.stream.impl.io.OutputStreamSourceStage
 import akka.stream.impl.{ ActorMaterializerImpl, StreamSupervisor }
-import akka.stream.scaladsl.{ Keep, StreamConverters, Sink }
+import akka.stream.scaladsl.{ Keep, Sink, Source, StreamConverters }
 import akka.stream.testkit.Utils._
 import akka.stream.testkit._
 import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.TestProbe
 import akka.util.ByteString
+
 import scala.concurrent.duration.Duration.Zero
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
@@ -60,6 +62,18 @@ class OutputStreamSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
       probe.expectNext(byteString)
       outputStream.close()
       probe.expectComplete()
+    }
+
+    "map materialized OutputStream" in assertAllStagesStopped {
+      val source: Source[ByteString, Unit] = StreamConverters.asOutputStream().mapMaterializedValue { out ⇒
+        try {
+          out.write(bytesArray)
+        } finally {
+          out.flush()
+          out.close()
+        }
+      }
+      source.runReduce(_ ++ _).futureValue shouldBe byteString
     }
 
     "block flush call until send all buffer to downstream" in assertAllStagesStopped {
